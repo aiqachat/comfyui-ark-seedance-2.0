@@ -44,27 +44,26 @@ app.registerExtension({
 
 /**
  * 为 API Key 字段设置密码掩码
- * 注意：不能直接修改 widget.type，否则 ComfyUI 无法正确序列化值
- * 改为通过 DOM 元素设置 input type="password"
+ * 通过定时检查 DOM input 元素来设置 password 类型
+ * 不修改 widget 的 draw/type 等属性，避免破坏渲染
  */
 function setupApiKeyMask(node) {
   const apiKeyWidget = node.widgets?.find((w) => w.name === "api_key");
-  if (apiKeyWidget) {
-    // 保存原始 draw 方法，在 widget 渲染后设置 input 类型
-    const originalDraw = apiKeyWidget.draw;
-    let masked = false;
-    apiKeyWidget.draw = function (ctx, node, width, y, height) {
-      if (originalDraw) {
-        originalDraw.call(this, ctx, node, width, y, height);
-      }
-      // 当 DOM input 元素可用时，设置为 password 类型
-      if (!masked && this.inputEl) {
-        this.inputEl.type = "password";
-        masked = true;
-        console.log("[Ark-Seedance] API Key 字段已设置为密码掩码模式");
-      }
-    };
-  }
+  if (!apiKeyWidget) return;
+
+  // 定时检查 inputEl 是否可用
+  let attempts = 0;
+  const interval = setInterval(() => {
+    attempts++;
+    if (apiKeyWidget.inputEl) {
+      apiKeyWidget.inputEl.type = "password";
+      clearInterval(interval);
+      console.log("[Ark-Seedance] API Key 字段已设置为密码掩码模式");
+    }
+    if (attempts > 50) {
+      clearInterval(interval);
+    }
+  }, 100);
 }
 
 /**
