@@ -79,7 +79,7 @@ class ArkSeedanceQueryTask:
                     "STRING",
                     {
                         "multiline": False,
-                        "default": "",
+                        "default": get_api_key(),
                         "placeholder": "留空则使用配置文件中的 API Key",
                     },
                 ),
