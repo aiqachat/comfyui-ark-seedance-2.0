@@ -71,68 +71,6 @@ function setupApiKeyMask(node) {
  * 设置视频生成节点
  */
 function setupVideoGenNode(node) {
-  // 模型切换时更新可用选项（widget 名称已改为中文）
-  const modelWidget = node.widgets?.find((w) => w.name === "模型");
-  const resolutionWidget = node.widgets?.find((w) => w.name === "分辨率");
-  const durationWidget = node.widgets?.find((w) => w.name === "时长");
-
-  // 根据模型更新时长选项
-  function updateDurationOptions(model) {
-    if (!durationWidget) return;
-
-    // 确定时长范围
-    let minDuration, maxDuration;
-    if (model.includes("2-0")) {
-      // 2.0 系列: 4-15 秒
-      minDuration = 4;
-      maxDuration = 15;
-    } else if (model.includes("1-5-pro")) {
-      // 1.5 pro: 4-12 秒
-      minDuration = 4;
-      maxDuration = 12;
-    } else {
-      // 1.0 系列: 2-12 秒（不支持智能）
-      minDuration = 2;
-      maxDuration = 12;
-    }
-
-    // 构建选项：智能 + 具体时长
-    const options = ["智能"];
-    for (let i = minDuration; i <= maxDuration; i++) {
-      options.push(String(i));
-    }
-
-    // 更新选项
-    durationWidget.options.values = options;
-
-    // 如果当前值不在选项中，重置为"智能"
-    if (!options.includes(durationWidget.value)) {
-      durationWidget.value = "智能";
-    }
-  }
-
-  if (modelWidget) {
-    modelWidget.callback = () => {
-      const model = modelWidget.value;
-
-      // Seedance 2.0 & 2.0 fast 不支持 1080p
-      if (
-        (model.includes("2-0") || model.includes("2-0-fast")) &&
-        resolutionWidget
-      ) {
-        if (resolutionWidget.value === "1080p") {
-          resolutionWidget.value = "720p";
-        }
-      }
-
-      // 更新时长选项
-      updateDurationOptions(model);
-    };
-
-    // 初始化时更新一次
-    updateDurationOptions(modelWidget.value);
-  }
-
   console.log("[Ark-Seedance] 视频生成节点已设置");
 }
 

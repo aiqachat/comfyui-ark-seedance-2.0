@@ -44,16 +44,11 @@ class ArkSeedanceVideoGen:
                     [
                         "doubao-seedance-2-0-260128",
                         "doubao-seedance-2-0-fast-260128",
-                        "doubao-seedance-1-5-pro",
-                        "doubao-seedance-1-0-pro",
-                        "doubao-seedance-1-0-pro-fast",
-                        "doubao-seedance-1-0-lite-t2v",
-                        "doubao-seedance-1-0-lite-i2v",
                     ],
                     {"default": "doubao-seedance-2-0-260128"},
                 ),
                 "分辨率": (
-                    ["480p", "720p", "1080p"],
+                    ["480p", "720p"],
                     {"default": "720p"},
                 ),
                 "宽高比": (
@@ -246,37 +241,11 @@ class ArkSeedanceVideoGen:
             raise ValueError(f"不支持的模式: {mode}")
 
     def _validate_duration_for_model(self, duration, model):
-        """
-        验证时长是否适合当前模型
-        
-        Args:
-            duration: 时长值（-1 表示智能指定）
-            model: 模型 ID
-            
-        Raises:
-            ValueError: 如果时长不适合当前模型
-        """
+        """验证时长是否适合当前模型（2.0 系列：智能 或 4-15 秒）"""
         if duration == -1:
-            # 智能指定模式，检查模型是否支持
-            if model in ["doubao-seedance-1-0-pro", "doubao-seedance-1-0-pro-fast", 
-                         "doubao-seedance-1-0-lite-t2v", "doubao-seedance-1-0-lite-i2v"]:
-                raise ValueError(
-                    f"模型 {model} 不支持智能指定时长（-1），请选择具体时长\n"
-                    "支持的模型：Seedance 2.0/2.0 fast（4-15秒）、Seedance 1.5 pro（4-12秒）"
-                )
             return
-        
-        # 检查各模型的时长范围
-        if model in ["doubao-seedance-1-0-pro", "doubao-seedance-1-0-pro-fast", 
-                     "doubao-seedance-1-0-lite-t2v", "doubao-seedance-1-0-lite-i2v"]:
-            if duration < 2 or duration > 12:
-                raise ValueError(f"模型 {model} 支持的时长范围：2-12 秒")
-        elif model == "doubao-seedance-1-5-pro":
-            if duration < 4 or duration > 12:
-                raise ValueError(f"模型 {model} 支持的时长范围：4-12 秒")
-        elif "2-0" in model:
-            if duration < 4 or duration > 15:
-                raise ValueError(f"模型 {model} 支持的时长范围：4-15 秒")
+        if duration < 4 or duration > 15:
+            raise ValueError(f"模型 {model} 支持的时长范围：4-15 秒")
 
     def _tensor_to_pil(self, image_tensor):
         """将 ComfyUI Tensor 转为 PIL Image"""
