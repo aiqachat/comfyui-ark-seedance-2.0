@@ -148,15 +148,14 @@ class ArkSeedanceVideoGen:
             # 初始化客户端
             client = SeedanceClient(api_key=api_key if api_key else None)
 
-            # 处理 duration 参数："智能" -> -1
+            # 处理 duration 参数："智能" -> None（不发送该字段，由 API 自动决定）
             if 时长 == "智能":
-                duration_value = -1
-                print("[Ark-Seedance] 时长: 智能指定（-1）")
+                duration_value = None
+                print("[Ark-Seedance] 时长: 智能（不指定，由 API 自动决定）")
             else:
                 duration_value = int(时长)
-            
-            # 验证 duration 是否适合当前模型
-            self._validate_duration_for_model(duration_value, 模型)
+                # 验证 duration 是否适合当前模型
+                self._validate_duration_for_model(duration_value, 模型)
 
             # 收集所有非空的图像输入
             image_inputs = [图片_1, 图片_2, 图片_3, 图片_4, 图片_5, 
@@ -241,9 +240,7 @@ class ArkSeedanceVideoGen:
             raise ValueError(f"不支持的模式: {mode}")
 
     def _validate_duration_for_model(self, duration, model):
-        """验证时长是否适合当前模型（2.0 系列：智能 或 4-15 秒）"""
-        if duration == -1:
-            return
+        """验证时长是否适合当前模型（2.0 系列：4-15 秒）"""
         if duration < 4 or duration > 15:
             raise ValueError(f"模型 {model} 支持的时长范围：4-15 秒")
 
