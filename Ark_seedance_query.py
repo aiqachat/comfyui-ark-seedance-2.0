@@ -73,14 +73,12 @@ class ArkSeedanceQueryTask:
                     "INT",
                     {"default": 3600, "min": 60, "max": 7200, "step": 60},
                 ),
-            },
-            "optional": {
                 "api_key": (
                     "STRING",
                     {
                         "multiline": False,
                         "default": get_api_key(),
-                        "placeholder": "留空则使用配置文件中的 API Key",
+                        "placeholder": "输入 API Key（自动保存）",
                     },
                 ),
             },

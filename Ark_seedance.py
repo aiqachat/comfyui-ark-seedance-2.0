@@ -71,6 +71,14 @@ class ArkSeedanceVideoGen:
                     "BOOLEAN",
                     {"default": False, "label_on": "返回尾帧", "label_off": "不返回尾帧"},
                 ),
+                "api_key": (
+                    "STRING",
+                    {
+                        "multiline": False,
+                        "default": get_api_key(),
+                        "placeholder": "输入 API Key（自动保存）",
+                    },
+                ),
             },
             "optional": {
                 "图片_1": ("IMAGE",),
@@ -94,14 +102,6 @@ class ArkSeedanceVideoGen:
                         "max": 2**32 - 1,
                         "step": 1,
                         "control_after_generate": "randomize",
-                    },
-                ),
-                "api_key": (
-                    "STRING",
-                    {
-                        "multiline": False,
-                        "default": get_api_key(),
-                        "placeholder": "留空则使用配置文件中的 API Key",
                     },
                 ),
             },
