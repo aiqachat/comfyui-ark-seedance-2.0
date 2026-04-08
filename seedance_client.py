@@ -51,6 +51,19 @@ class SeedanceClient:
                 response = requests.request(method, url, timeout=self.timeout, **kwargs)
                 response.raise_for_status()
                 return response
+            except requests.exceptions.HTTPError as e:
+                # 打印 API 返回的详细错误信息
+                error_body = ""
+                try:
+                    error_body = e.response.text
+                except Exception:
+                    pass
+                last_error = e
+                print(f"[Ark-Seedance] [WARN] 请求失败 (尝试 {attempt}/{self.max_retries}): {e}")
+                if error_body:
+                    print(f"[Ark-Seedance] [WARN] API 错误详情: {error_body}")
+                if attempt < self.max_retries:
+                    time.sleep(2**attempt)
             except requests.exceptions.RequestException as e:
                 last_error = e
                 print(f"[Ark-Seedance] [WARN] 请求失败 (尝试 {attempt}/{self.max_retries}): {e}")
@@ -100,7 +113,16 @@ class SeedanceClient:
             if param in kwargs and kwargs[param] is not None:
                 payload[param] = kwargs[param]
 
+        # 调试：打印请求 payload（隐藏 base64 图片数据）
+        debug_payload = json.loads(json.dumps(payload))
+        if "content" in debug_payload:
+            for item in debug_payload["content"]:
+                if item.get("type") == "image_url" and "image_url" in item:
+                    url_val = item["image_url"].get("url", "")
+                    if url_val.startswith("data:"):
+                        item["image_url"]["url"] = f"data:image/...;base64,[{len(url_val)}chars]"
         print(f"[Ark-Seedance] 创建任务: model={model}")
+        print(f"[Ark-Seedance] 请求 payload: {json.dumps(debug_payload, ensure_ascii=False, indent=2)}")
 
         response = self._make_request("POST", url, json=payload)
         return response.json()
