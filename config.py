@@ -101,3 +101,100 @@ def get_timeout():
     """获取请求超时（秒）"""
     config = load_config()
     return config.getint("DEFAULT", "timeout", fallback=600)
+
+
+# ── TOS 配置 ────────────────────────────────────────────────────────────
+
+def get_tos_config():
+    """
+    获取完整 TOS 配置。
+    非敏感配置从 config.ini[TOS] 读取，
+    AK/SK 从 master_key.ini[TOS] 读取。
+    """
+    config = load_config()
+    master = load_master_key()
+    return {
+        "tos_access_key": master.get("TOS", "tos_access_key", fallback=""),
+        "tos_secret_key": master.get("TOS", "tos_secret_key", fallback=""),
+        "tos_endpoint": config.get("TOS", "tos_endpoint", fallback="tos-cn-beijing.volces.com"),
+        "tos_region": config.get("TOS", "tos_region", fallback="cn-beijing"),
+        "tos_bucket": config.get("TOS", "tos_bucket", fallback=""),
+        "url_expires": config.getint("TOS", "url_expires", fallback=3600),
+    }
+
+
+def save_tos_config(access_key=None, secret_key=None, endpoint=None,
+                    region=None, bucket=None, url_expires=None):
+    """
+    保存 TOS 配置。
+    AK/SK 写入 master_key.ini[TOS]，其他写入 config.ini[TOS]。
+    仅传入非 None 的字段会被更新。
+    """
+    with CONFIG_LOCK:
+        # 保存非敏感配置到 config.ini
+        config = load_config()
+        if "TOS" not in config:
+            config["TOS"] = {}
+        if endpoint is not None:
+            config["TOS"]["tos_endpoint"] = str(endpoint)
+        if region is not None:
+            config["TOS"]["tos_region"] = str(region)
+        if bucket is not None:
+            config["TOS"]["tos_bucket"] = str(bucket)
+        if url_expires is not None:
+            config["TOS"]["url_expires"] = str(int(url_expires))
+
+        with CONFIG_PATH.open("w", encoding="utf-8") as f:
+            config.write(f)
+
+        # 保存敏感配置到 master_key.ini
+        if access_key is not None or secret_key is not None:
+            master = load_master_key()
+            if "TOS" not in master:
+                master["TOS"] = {}
+            if access_key is not None:
+                master["TOS"]["tos_access_key"] = str(access_key)
+            if secret_key is not None:
+                master["TOS"]["tos_secret_key"] = str(secret_key)
+            with MASTER_KEY_PATH.open("w", encoding="utf-8") as f:
+                master.write(f)
+
+
+def get_tos_access_key():
+    """获取 TOS Access Key"""
+    master = load_master_key()
+    key = master.get("TOS", "tos_access_key", fallback="")
+    if key:
+        print(f"[Ark-Seedance] 从 {MASTER_KEY_PATH} 读取到 TOS Access Key (长度: {len(key)})")
+    return key
+
+
+def get_tos_secret_key():
+    """获取 TOS Secret Key"""
+    master = load_master_key()
+    key = master.get("TOS", "tos_secret_key", fallback="")
+    return key
+
+
+def get_tos_endpoint():
+    """获取 TOS Endpoint"""
+    config = load_config()
+    return config.get("TOS", "tos_endpoint", fallback="tos-cn-beijing.volces.com")
+
+
+def get_tos_region():
+    """获取 TOS Region"""
+    config = load_config()
+    return config.get("TOS", "tos_region", fallback="cn-beijing")
+
+
+def get_tos_bucket():
+    """获取 TOS Bucket 名称"""
+    config = load_config()
+    return config.get("TOS", "tos_bucket", fallback="")
+
+
+def get_tos_url_expires():
+    """获取预签名 URL 过期时间（秒）"""
+    config = load_config()
+    return config.getint("TOS", "url_expires", fallback=3600)

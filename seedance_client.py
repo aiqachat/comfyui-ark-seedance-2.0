@@ -21,6 +21,19 @@ except ImportError:
 class SeedanceClient:
     """Seedance 视频生成 API 客户端"""
 
+    # 常见 API 错误码 → 中文提示
+    _ERROR_MESSAGES = {
+        "InputImageSensitiveContentDetected.PrivacyInformation": "输入图片包含真实人脸，触发隐私保护限制。请使用不含真人面孔的图片，或在火山方舟控制台检查内容审核设置。",
+        "InputImageSensitiveContentDetected": "输入图片包含敏感内容，被安全审核拦截。请更换图片后重试。",
+        "InputTextSensitiveContentDetected": "输入文本包含敏感内容，被安全审核拦截。请修改提示词后重试。",
+        "OutputVideoSensitiveContentDetected": "生成的视频包含敏感内容，被安全审核拦截。请修改提示词后重试。",
+        "InvalidParameter": "请求参数无效，请检查输入参数是否符合模型要求。",
+        "RateLimitExceeded": "请求过于频繁，已超出速率限制。请稍后再试。",
+        "InsufficientBalance": "账户余额不足。请前往火山方舟控制台充值。",
+        "ModelNotFound": "指定的模型不存在或未开通。请检查模型 ID 是否正确。",
+        "Unauthorized": "API Key 无效或已过期。请检查 API Key 是否正确。",
+    }
+
     def __init__(self, api_key=None, base_url=None):
         # 如果用户提供了新的 API Key，保存到配置文件
         if api_key and api_key.strip():
@@ -38,6 +51,20 @@ class SeedanceClient:
         if not self.api_key:
             raise ValueError("API Key 未配置，请在节点中输入 API Key 或在 master_key.ini 中设置 api_key")
 
+    def _get_friendly_error(self, error_code, api_message):
+        """根据 API 错误码返回友好的中文提示"""
+        # 精确匹配
+        if error_code in self._ERROR_MESSAGES:
+            return self._ERROR_MESSAGES[error_code]
+        # 前缀匹配（如 InputImageSensitiveContentDetected.XXX）
+        for key, msg in self._ERROR_MESSAGES.items():
+            if error_code.startswith(key):
+                return msg
+        # 使用 API 原始消息
+        if api_message:
+            return f"API 错误: {api_message}"
+        return ""
+
     def _make_request(self, method, url, **kwargs):
         """发送 HTTP 请求，支持重试"""
         headers = kwargs.pop("headers", {})
@@ -46,19 +73,29 @@ class SeedanceClient:
         kwargs["headers"] = headers
 
         last_error = None
+        last_error_message = ""
         for attempt in range(1, self.max_retries + 1):
             try:
                 response = requests.request(method, url, timeout=self.timeout, **kwargs)
                 response.raise_for_status()
                 return response
             except requests.exceptions.HTTPError as e:
-                # 打印 API 返回的详细错误信息
+                # 解析 API 返回的详细错误信息
                 error_body = ""
+                api_error_code = ""
+                api_error_msg = ""
                 try:
                     error_body = e.response.text
+                    error_data = json.loads(error_body)
+                    api_error_code = error_data.get("error", {}).get("code", "")
+                    api_error_msg = error_data.get("error", {}).get("message", "")
                 except Exception:
                     pass
+
                 last_error = e
+                friendly_msg = self._get_friendly_error(api_error_code, api_error_msg)
+                last_error_message = friendly_msg or str(e)
+
                 print(f"[Ark-Seedance] [WARN] 请求失败 (尝试 {attempt}/{self.max_retries}): {e}")
                 if error_body:
                     print(f"[Ark-Seedance] [WARN] API 错误详情: {error_body}")
@@ -66,11 +103,12 @@ class SeedanceClient:
                     time.sleep(2**attempt)
             except requests.exceptions.RequestException as e:
                 last_error = e
+                last_error_message = str(e)
                 print(f"[Ark-Seedance] [WARN] 请求失败 (尝试 {attempt}/{self.max_retries}): {e}")
                 if attempt < self.max_retries:
                     time.sleep(2**attempt)
 
-        raise last_error or Exception("请求失败")
+        raise RuntimeError(last_error_message) from last_error
 
     def create_task(self, model, content, **kwargs):
         """
@@ -285,8 +323,10 @@ class SeedanceClient:
 
         # 添加视频
         if video_urls:
+            print(f"[SeedanceClient] [DEBUG] 接收到 video_urls: {video_urls}")
             roles = video_roles or ["reference_video"] * len(video_urls)
             for video_url, role in zip(video_urls, roles):
+                print(f"[SeedanceClient] [DEBUG] 添加视频: {video_url[:80]}... role={role}")
                 content.append(
                     {
                         "type": "video_url",

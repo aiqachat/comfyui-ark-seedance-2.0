@@ -104,6 +104,69 @@ class ArkSeedanceVideoGen:
                         "control_after_generate": "randomize",
                     },
                 ),
+                # 视频 URL 输入（从 TOS 上传节点接入）
+                "视频URL_1": (
+                    "STRING",
+                    {"default": "", "placeholder": "视频预签名URL（从TOS上传节点获取）"},
+                ),
+                "视频URL_2": (
+                    "STRING",
+                    {"default": "", "placeholder": "视频预签名URL"},
+                ),
+                "视频URL_3": (
+                    "STRING",
+                    {"default": "", "placeholder": "视频预签名URL"},
+                ),
+                # 音频 URL 输入
+                "音频URL_1": (
+                    "STRING",
+                    {"default": "", "placeholder": "音频预签名URL（从TOS上传节点获取）"},
+                ),
+                "音频URL_2": (
+                    "STRING",
+                    {"default": "", "placeholder": "音频预签名URL"},
+                ),
+                "音频URL_3": (
+                    "STRING",
+                    {"default": "", "placeholder": "音频预签名URL"},
+                ),
+                # 图片 URL 输入（与 IMAGE tensor 互补使用）
+                "图片URL_1": (
+                    "STRING",
+                    {"default": "", "placeholder": "图片预签名URL（从TOS上传节点获取）"},
+                ),
+                "图片URL_2": (
+                    "STRING",
+                    {"default": "", "placeholder": "图片预签名URL"},
+                ),
+                "图片URL_3": (
+                    "STRING",
+                    {"default": "", "placeholder": "图片预签名URL"},
+                ),
+                "图片URL_4": (
+                    "STRING",
+                    {"default": "", "placeholder": "图片预签名URL"},
+                ),
+                "图片URL_5": (
+                    "STRING",
+                    {"default": "", "placeholder": "图片预签名URL"},
+                ),
+                "图片URL_6": (
+                    "STRING",
+                    {"default": "", "placeholder": "图片预签名URL"},
+                ),
+                "图片URL_7": (
+                    "STRING",
+                    {"default": "", "placeholder": "图片预签名URL"},
+                ),
+                "图片URL_8": (
+                    "STRING",
+                    {"default": "", "placeholder": "图片预签名URL"},
+                ),
+                "图片URL_9": (
+                    "STRING",
+                    {"default": "", "placeholder": "图片预签名URL"},
+                ),
             },
         }
 
@@ -141,6 +204,21 @@ class ArkSeedanceVideoGen:
         图片用途="参考图",
         种子=-1,
         api_key="",
+        视频URL_1="",
+        视频URL_2="",
+        视频URL_3="",
+        音频URL_1="",
+        音频URL_2="",
+        音频URL_3="",
+        图片URL_1="",
+        图片URL_2="",
+        图片URL_3="",
+        图片URL_4="",
+        图片URL_5="",
+        图片URL_6="",
+        图片URL_7="",
+        图片URL_8="",
+        图片URL_9="",
     ):
         """执行视频生成任务"""
 
@@ -157,28 +235,51 @@ class ArkSeedanceVideoGen:
                 # 验证 duration 是否适合当前模型
                 self._validate_duration_for_model(duration_value, 模型)
 
-            # 收集所有非空的图像输入
-            image_inputs = [图片_1, 图片_2, 图片_3, 图片_4, 图片_5, 
-                           图片_6, 图片_7, 图片_8, 图片_9]
-            
-            # 处理图片输入
+            # 处理图片输入：tensor 优先，URL 兜底
+            image_tensors = [图片_1, 图片_2, 图片_3, 图片_4, 图片_5, 
+                            图片_6, 图片_7, 图片_8, 图片_9]
+            image_urls_input = [图片URL_1, 图片URL_2, 图片URL_3, 图片URL_4, 图片URL_5,
+                               图片URL_6, 图片URL_7, 图片URL_8, 图片URL_9]
+
             image_list = []
-            for img in image_inputs:
-                if img is not None:
-                    pil_img = self._tensor_to_pil(img)
+            for tensor, url in zip(image_tensors, image_urls_input):
+                if tensor is not None:
+                    pil_img = self._tensor_to_pil(tensor)
                     image_list.append(pil_img)
+                elif url and url.strip():
+                    # 使用预签名 URL（TOS 上传节点输出）
+                    image_list.append(url.strip())
 
             # 根据用户选择的模式确定图片角色
             api_mode = self._MODE_MAP.get(图片用途, "reference_image")
             roles_list = self._get_roles_by_mode(api_mode, len(image_list))
+
+            print(f"[Ark-Seedance] 使用 {len(image_list)} 张图片（含TOS URL），模式: {图片用途}")
+
+            # 处理视频/音频 URL 输入
+            video_urls = [u.strip() for u in [视频URL_1, 视频URL_2, 视频URL_3] if u and u.strip()]
+            audio_urls = [u.strip() for u in [音频URL_1, 音频URL_2, 音频URL_3] if u and u.strip()]
             
-            print(f"[Ark-Seedance] 使用 {len(image_list)} 张图片，模式: {图片用途}")
+            # 调试日志
+            print(f"[Ark-Seedance] [DEBUG] 视频URL_1: {repr(视频URL_1[:50] if 视频URL_1 else 'None')}...")
+            print(f"[Ark-Seedance] [DEBUG] 视频URL_2: {repr(视频URL_2[:50] if 视频URL_2 else 'None')}...")
+            print(f"[Ark-Seedance] [DEBUG] 视频URL_3: {repr(视频URL_3[:50] if 视频URL_3 else 'None')}...")
+            print(f"[Ark-Seedance] [DEBUG] 解析后的 video_urls: {video_urls}")
+            
+            if video_urls:
+                print(f"[Ark-Seedance] 使用 {len(video_urls)} 个视频参考（TOS URL）")
+            if audio_urls:
+                print(f"[Ark-Seedance] 使用 {len(audio_urls)} 个音频参考（TOS URL）")
 
             # 构建 content
             content = SeedanceClient.build_content(
                 text=提示词 if 提示词 else None,
                 images=image_list if image_list else None,
                 image_roles=roles_list if roles_list else None,
+                video_urls=video_urls if video_urls else None,
+                video_roles=["reference_video"] * len(video_urls) if video_urls else None,
+                audio_urls=audio_urls if audio_urls else None,
+                audio_roles=["reference_audio"] * len(audio_urls) if audio_urls else None,
             )
 
             # 检查 content 是否为空
