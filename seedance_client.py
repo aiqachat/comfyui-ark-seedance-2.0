@@ -13,9 +13,9 @@ import requests
 from PIL import Image
 
 try:
-    from .config import get_api_base_url, get_api_key, get_max_retries, get_timeout, save_api_key
+    from .config import get_api_base_url, get_api_key, get_max_retries, get_timeout, save_api_base_url, save_api_key
 except ImportError:
-    from config import get_api_base_url, get_api_key, get_max_retries, get_timeout, save_api_key
+    from config import get_api_base_url, get_api_key, get_max_retries, get_timeout, save_api_base_url, save_api_key
 
 
 DEFAULT_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3"
@@ -47,7 +47,16 @@ class SeedanceClient:
             print(f"[Ark-Seedance] 节点未输入 API Key (收到值: {repr(api_key)})，尝试从配置文件读取...")
             self.api_key = get_api_key()
         
-        self.base_url = (base_url or get_api_base_url()).rstrip("/")
+        # 如果用户提供了新的 Base URL，保存到配置文件
+        if base_url and base_url.strip():
+            self.base_url = base_url.strip().rstrip("/")
+            saved_url = get_api_base_url()
+            if self.base_url != saved_url.rstrip("/"):
+                save_api_base_url(self.base_url)
+                print(f"[Ark-Seedance] Base URL 已更新并保存到 config.ini")
+        else:
+            self.base_url = get_api_base_url().rstrip("/")
+
         self.max_retries = get_max_retries()
         self.timeout = get_timeout()
         self._is_default_api = self._check_is_default_api()

@@ -85,6 +85,14 @@ def get_api_base_url():
     return config.get("DEFAULT", "api_base_url", fallback="https://ark.cn-beijing.volces.com/api/v3")
 
 
+def save_api_base_url(base_url):
+    """保存 API Base URL 到 config.ini"""
+    config = load_config()
+    config["DEFAULT"]["api_base_url"] = base_url
+    save_config(config)
+    print(f"[Ark-Seedance] API Base URL 已写入 {CONFIG_PATH}: {base_url}")
+
+
 def get_poll_interval():
     """获取轮询间隔（秒）"""
     config = load_config()
