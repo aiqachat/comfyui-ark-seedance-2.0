@@ -11,10 +11,10 @@ import torch
 from PIL import Image
 
 try:
-    from .config import get_api_key, get_poll_interval
+    from .config import get_api_base_url, get_api_key, get_poll_interval
     from .seedance_client import SeedanceClient
 except ImportError:
-    from config import get_api_key, get_poll_interval
+    from config import get_api_base_url, get_api_key, get_poll_interval
     from seedance_client import SeedanceClient
 
 
@@ -77,6 +77,14 @@ class ArkSeedanceVideoGen:
                         "multiline": False,
                         "default": get_api_key(),
                         "placeholder": "输入 API Key（自动保存）",
+                    },
+                ),
+                "base_url": (
+                    "STRING",
+                    {
+                        "multiline": False,
+                        "default": get_api_base_url(),
+                        "placeholder": "API Base URL（默认使用火山方舟官方地址）",
                     },
                 ),
             },
@@ -192,6 +200,8 @@ class ArkSeedanceVideoGen:
         生成音频,
         水印,
         返回尾帧,
+        api_key="",
+        base_url="",
         图片_1=None,
         图片_2=None,
         图片_3=None,
@@ -203,7 +213,6 @@ class ArkSeedanceVideoGen:
         图片_9=None,
         图片用途="参考图",
         种子=-1,
-        api_key="",
         视频URL_1="",
         视频URL_2="",
         视频URL_3="",
@@ -224,7 +233,10 @@ class ArkSeedanceVideoGen:
 
         try:
             # 初始化客户端
-            client = SeedanceClient(api_key=api_key if api_key else None)
+            client = SeedanceClient(
+                api_key=api_key if api_key else None,
+                base_url=base_url if base_url else None,
+            )
 
             # 处理 duration 参数："智能" -> None（不发送该字段，由 API 自动决定）
             if 时长 == "智能":

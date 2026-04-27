@@ -18,6 +18,9 @@ except ImportError:
     from config import get_api_base_url, get_api_key, get_max_retries, get_timeout, save_api_key
 
 
+DEFAULT_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3"
+
+
 class SeedanceClient:
     """Seedance 视频生成 API 客户端"""
 
@@ -47,9 +50,19 @@ class SeedanceClient:
         self.base_url = (base_url or get_api_base_url()).rstrip("/")
         self.max_retries = get_max_retries()
         self.timeout = get_timeout()
+        self._is_default_api = self._check_is_default_api()
+
+        if self._is_default_api:
+            print(f"[Ark-Seedance] 使用官方 API: {self.base_url}")
+        else:
+            print(f"[Ark-Seedance] 使用第三方 API: {self.base_url}")
 
         if not self.api_key:
             raise ValueError("API Key 未配置，请在节点中输入 API Key 或在 master_key.ini 中设置 api_key")
+
+    def _check_is_default_api(self):
+        """判断是否使用火山方舟官方 API"""
+        return "ark.cn-beijing.volces.com" in self.base_url
 
     def _get_friendly_error(self, error_code, api_message):
         """根据 API 错误码返回友好的中文提示"""
@@ -122,6 +135,13 @@ class SeedanceClient:
         Returns:
             dict: 包含任务 ID 的响应
         """
+        if self._is_default_api:
+            return self._create_task_default(model, content, **kwargs)
+        else:
+            return self._create_task_thirdparty(model, content, **kwargs)
+
+    def _create_task_default(self, model, content, **kwargs):
+        """官方 API 请求格式"""
         url = f"{self.base_url}/contents/generations/tasks"
 
         payload = {
@@ -151,7 +171,43 @@ class SeedanceClient:
             if param in kwargs and kwargs[param] is not None:
                 payload[param] = kwargs[param]
 
-        # 调试：打印请求 payload（隐藏 base64 图片数据）
+        self._log_create_task(model, payload)
+        response = self._make_request("POST", url, json=payload)
+        return response.json()
+
+    def _create_task_thirdparty(self, model, content, **kwargs):
+        """第三方 API 请求格式 — 使用 content 字段包裹原生参数"""
+        url = f"{self.base_url}/video/generations"
+
+        payload = {
+            "model": model,
+            "content": content,
+        }
+
+        # 添加可选参数（与第三方 API 兼容的参数）
+        optional_params = [
+            "resolution",
+            "ratio",
+            "duration",
+            "seed",
+            "generate_audio",
+            "watermark",
+            "return_last_frame",
+            "service_tier",
+            "stream",
+            "callback_url",
+        ]
+
+        for param in optional_params:
+            if param in kwargs and kwargs[param] is not None:
+                payload[param] = kwargs[param]
+
+        self._log_create_task(model, payload)
+        response = self._make_request("POST", url, json=payload)
+        return response.json()
+
+    def _log_create_task(self, model, payload):
+        """打印创建任务的调试日志"""
         debug_payload = json.loads(json.dumps(payload))
         if "content" in debug_payload:
             for item in debug_payload["content"]:
@@ -161,9 +217,6 @@ class SeedanceClient:
                         item["image_url"]["url"] = f"data:image/...;base64,[{len(url_val)}chars]"
         print(f"[Ark-Seedance] 创建任务: model={model}")
         print(f"[Ark-Seedance] 请求 payload: {json.dumps(debug_payload, ensure_ascii=False, indent=2)}")
-
-        response = self._make_request("POST", url, json=payload)
-        return response.json()
 
     def get_task_status(self, task_id):
         """
@@ -175,7 +228,10 @@ class SeedanceClient:
         Returns:
             dict: 任务状态和结果
         """
-        url = f"{self.base_url}/contents/generations/tasks/{task_id}"
+        if self._is_default_api:
+            url = f"{self.base_url}/contents/generations/tasks/{task_id}"
+        else:
+            url = f"{self.base_url}/video/generations/{task_id}"
 
         response = self._make_request("GET", url)
         return response.json()

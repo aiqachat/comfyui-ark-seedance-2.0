@@ -12,10 +12,10 @@ import torch
 from PIL import Image
 
 try:
-    from .config import get_api_key, get_poll_interval
+    from .config import get_api_base_url, get_api_key, get_poll_interval
     from .seedance_client import SeedanceClient
 except ImportError:
-    from config import get_api_key, get_poll_interval
+    from config import get_api_base_url, get_api_key, get_poll_interval
     from seedance_client import SeedanceClient
 
 # 导入 ComfyUI 内置的 Video 类型
@@ -81,6 +81,14 @@ class ArkSeedanceQueryTask:
                         "placeholder": "输入 API Key（自动保存）",
                     },
                 ),
+                "base_url": (
+                    "STRING",
+                    {
+                        "multiline": False,
+                        "default": get_api_base_url(),
+                        "placeholder": "API Base URL（默认使用火山方舟官方地址）",
+                    },
+                ),
             },
         }
 
@@ -91,12 +99,16 @@ class ArkSeedanceQueryTask:
         轮询间隔,
         最大等待,
         api_key="",
+        base_url="",
     ):
         """查询任务状态"""
 
         try:
             # 初始化客户端
-            client = SeedanceClient(api_key=api_key if api_key else None)
+            client = SeedanceClient(
+                api_key=api_key if api_key else None,
+                base_url=base_url if base_url else None,
+            )
 
             if not 任务ID:
                 raise ValueError("任务 ID 不能为空")
