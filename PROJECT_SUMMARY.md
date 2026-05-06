@@ -70,6 +70,7 @@ ark-comfyui-0/
 - ✅ 动态参数调整（模型切换时自动更新可用选项）
 - ✅ 配置持久化
 - ✅ 错误重试机制
+- ✅ 自定义 API Base URL（兼容第三方 API 代理，智能路由自动切换端点和请求格式）
 
 #### 4.1 智能场景判断规则
 
@@ -97,12 +98,18 @@ ark-comfyui-0/
 - 查询节点支持自动轮询和单次查询两种模式
 - 可配置轮询间隔和最大等待时间
 
-#### 5.4 视频处理
+#### 5.4 智能 API 路由
+- 根据 Base URL 自动判断使用官方 API 或第三方 API
+- 官方 API：使用 `/contents/generations/tasks` 端点
+- 第三方 API：使用 `/video/generations` 端点，通过 `content` 字段透传原生参数
+- Base URL 修改后自动持久化到 `config.ini`
+
+#### 5.5 视频处理
 - 使用 OpenCV 提取视频帧
 - 自动均匀采样
 - 转为 ComfyUI Tensor 格式
 
-#### 5.5 前端扩展
+#### 5.6 前端扩展
 - 模型切换时自动更新可用参数范围
 - 防止用户选择无效参数组合
 
@@ -111,6 +118,7 @@ ark-comfyui-0/
 #### config.ini
 ```ini
 [DEFAULT]
+# 默认使用火山方舟官方地址，修改为第三方地址后会自动切换请求格式
 api_base_url = https://ark.cn-beijing.volces.com/api/v3
 poll_interval = 30
 max_retries = 3

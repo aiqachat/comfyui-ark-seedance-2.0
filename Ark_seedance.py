@@ -48,7 +48,7 @@ class ArkSeedanceVideoGen:
                     {"default": "doubao-seedance-2-0-260128"},
                 ),
                 "分辨率": (
-                    ["480p", "720p"],
+                    ["480p", "720p", "1080p"],
                     {"default": "720p"},
                 ),
                 "宽高比": (

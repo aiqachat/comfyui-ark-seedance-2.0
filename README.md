@@ -14,6 +14,7 @@
 - 返回视频尾帧（用于连续视频串联）
 - 异步任务轮询
 - 支持 Seedance 2.0 和 Seedance 2.0 fast 两个模型
+- 支持自定义 API Base URL（兼容第三方 API 代理）
 
 ## 支持的模型
 
@@ -58,6 +59,34 @@ api_key = your_api_key_here
 
 获取 API Key: https://console.volcengine.com/ark/region:ark+cn-beijing/apikey
 
+## 配置 API Base URL
+
+默认使用火山方舟官方地址 `https://ark.cn-beijing.volces.com/api/v3`，也支持配置第三方 API 代理地址。
+
+**方式一：节点输入（推荐）**
+
+在节点的 `base_url` 字段中修改地址，运行一次后会自动保存到 `config.ini`。
+
+**方式二：手动编辑配置文件**
+
+编辑 `config.ini` 文件：
+
+```ini
+[DEFAULT]
+api_base_url = https://your-proxy.example.com/v1
+```
+
+**智能路由说明：**
+
+插件会根据 Base URL 自动选择请求方式：
+
+| Base URL | 创建任务端点 | 查询任务端点 | 请求格式 |
+|----------|------------|------------|---------|
+| 默认（`ark.cn-beijing.volces.com`） | `/contents/generations/tasks` | `/contents/generations/tasks/{id}` | 官方格式 |
+| 自定义（第三方） | `/video/generations` | `/video/generations/{id}` | 使用 `content` 包裹参数 |
+
+当使用第三方 API 时，插件会将原生的 `content` 数组（包含 text、image_url、video_url、audio_url 等）直接传递到请求体的 `content` 字段中，实现参数透传。
+
 ## 节点说明
 
 ### Ark Seedance 视频生成
@@ -79,7 +108,8 @@ api_key = your_api_key_here
 | 图片_1~9 | IMAGE（可选） | 参考图像，最多 9 张 |
 | 图片用途 | 下拉选择 | 参考图 / 首帧 / 首尾帧 |
 | 种子 | INT（可选） | 随机种子，-1 表示随机 |
-| api_key | STRING（可选） | API Key，留空则从配置文件读取 |
+| api_key | STRING | API Key，留空则从配置文件读取 |
+| base_url | STRING | API Base URL，默认使用火山方舟官方地址，修改后自动保存 |
 
 **输出：** 任务ID（STRING）
 
@@ -103,7 +133,8 @@ api_key = your_api_key_here
 | 自动轮询 | 布尔 | 开启后自动等待任务完成 |
 | 轮询间隔 | INT | 轮询间隔秒数，默认 30 |
 | 最大等待 | INT | 最大等待秒数，默认 3600 |
-| api_key | STRING（可选） | 同上 |
+| api_key | STRING | 同上 |
+| base_url | STRING | API Base URL，需与视频生成节点保持一致 |
 
 **输出：**
 
@@ -191,6 +222,7 @@ api_key = your_api_key_here
 
 ```ini
 [DEFAULT]
+# 默认使用火山方舟官方地址，修改为第三方地址后会自动切换请求格式
 api_base_url = https://ark.cn-beijing.volces.com/api/v3
 poll_interval = 30
 max_retries = 3
