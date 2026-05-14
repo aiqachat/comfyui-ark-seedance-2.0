@@ -270,7 +270,8 @@ class SeedanceClient:
 
             print(f"[Ark-Seedance] 任务状态: {status} (已等待 {int(elapsed)}秒)")
 
-            if status in ("succeeded", "failed", "expired", "cancelled"):
+            # 兼容新旧 API 的状态值：新 API 使用 completed，旧 API 使用 succeeded
+            if status in ("succeeded", "completed", "failed", "expired", "cancelled"):
                 return result
 
             time.sleep(poll_interval)

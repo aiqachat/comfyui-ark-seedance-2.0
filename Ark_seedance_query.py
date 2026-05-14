@@ -129,12 +129,19 @@ class ArkSeedanceQueryTask:
             video_url = ""
             last_frame = None
 
-            if status == "succeeded":
-                video_url = result.get("content", {}).get("video_url", "")
+            # 兼容新旧 API 的成功状态
+            if status in ("succeeded", "completed"):
+                # 优先尝试新 API 格式：data[0].url
+                video_url = ""
+                if "data" in result and isinstance(result["data"], list) and len(result["data"]) > 0:
+                    video_url = result["data"][0].get("url", "").strip().strip("` ")
+                # 兜底使用旧 API 格式：content.video_url
+                if not video_url:
+                    video_url = result.get("content", {}).get("video_url", "").strip()
 
                 if video_url:
                     try:
-                        print(f"[Ark-Seedance] 下载视频: {video_url}")
+                        print(f"[Ark-Seedance] 下载视频: {video_url[:100]}...")
                         video_content = client.download_video(video_url)
 
                         # 直接用 BytesIO 创建 ComfyUI VideoFromFile 对象
@@ -148,9 +155,14 @@ class ArkSeedanceQueryTask:
                         video_result = None
 
                 # 尝试提取尾帧（独立于主视频，失败不影响主流程）
-                if result.get("content", {}).get("last_frame_url"):
+                last_frame_url = ""
+                if "data" in result and isinstance(result["data"], list) and len(result["data"]) > 0:
+                    last_frame_url = result["data"][0].get("last_frame_url", "")
+                if not last_frame_url:
+                    last_frame_url = result.get("content", {}).get("last_frame_url", "")
+                    
+                if last_frame_url:
                     try:
-                        last_frame_url = result["content"]["last_frame_url"]
                         last_frame_content = client.download_video(last_frame_url)
                         last_frame = self._bytes_to_tensor(last_frame_content)
                         print("[Ark-Seedance] 成功提取尾帧")
